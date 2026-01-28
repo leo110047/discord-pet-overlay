@@ -1,0 +1,99 @@
+/* 全域樣式 - 透明背景 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background: transparent;
+}
+
+/* 寵物容器 - 位置由視窗位置控制，這裡只需固定在視窗底部 */
+#pet-container {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 150px;
+  bottom: 0;
+  pointer-events: none;
+}
+
+/* 寵物本體 */
+.pet {
+  position: absolute;
+  bottom: 10px;
+  left: 50px;
+  width: 64px;
+  height: 64px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  image-rendering: pixelated;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: auto;
+}
+
+.pet:hover {
+  transform: scale(1.1);
+}
+
+.pet.walking {
+  animation: walk 0.4s steps(2) infinite;
+}
+
+.pet.facing-left {
+  transform: scaleX(-1);
+}
+
+.pet.facing-left:hover {
+  transform: scaleX(-1) scale(1.1);
+}
+
+.pet.facing-left.walking {
+  animation: walk-left 0.4s steps(2) infinite;
+}
+
+@keyframes walk {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes walk-left {
+  0%, 100% { transform: scaleX(-1) translateY(0); }
+  50% { transform: scaleX(-1) translateY(-3px); }
+}
+
+/* Discord 未運行警告 */
+.discord-warning {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(237, 66, 69, 0.95);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  pointer-events: none;
+}
+
+/* 隱藏元素 */
+.hidden {
+  display: none !important;
+}

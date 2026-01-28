@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>設定 - Discord Pet Overlay</title>
+    <link rel="stylesheet" href="/src/settings.css" />
+  </head>
+  <body>
+    <div id="settings-app">
+      <!-- 連線狀態 -->
+      <div class="status-section">
+        <div id="connection-status" class="status disconnected">
+          <span class="status-dot"></span>
+          <span class="status-text">未連線</span>
+        </div>
+      </div>
+
+      <!-- 連線設定區塊 - 未連線時顯示 -->
+      <div id="pairing-section" class="settings-section">
+        <div class="section-title">配對設定</div>
+
+        <!-- 步驟 1：輸入 Discord ID -->
+        <div class="form-group">
+          <label for="discord-id">步驟 1：輸入你的 Discord ID</label>
+          <p class="section-desc">在 Discord 設定中開啟「開發者模式」，然後右鍵點擊自己的頭像，選擇「複製 ID」</p>
+          <div class="input-row">
+            <input type="text" id="discord-id" placeholder="例如：123456789012345678" inputmode="numeric" />
+            <button id="request-code-btn" class="secondary-btn" type="button">發送配對碼</button>
+          </div>
+        </div>
+
+        <!-- 步驟 2：輸入配對碼 -->
+        <div class="form-group">
+          <label for="pair-code">步驟 2：輸入收到的配對碼</label>
+          <p class="section-desc">Bot 會私訊一組 6 位數配對碼給你</p>
+          <div class="input-row">
+            <input type="text" id="pair-code" placeholder="輸入 6 位數配對碼" maxlength="6" inputmode="numeric" />
+            <button id="link-btn" class="primary-btn" type="button">連結</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 已連線時顯示 -->
+      <div id="connected-section" class="settings-section hidden">
+        <div class="section-title">帳號</div>
+        <div class="form-group">
+          <button id="logout-btn" class="danger-btn" type="button">登出 / 重新配對</button>
+        </div>
+      </div>
+
+      <!-- 外觀設定區塊 -->
+      <div class="settings-section">
+        <div class="section-title">外觀設定</div>
+
+        <div class="form-group">
+          <label>寵物垂直位置</label>
+          <p class="section-desc">點擊箭頭調整寵物在螢幕上的位置</p>
+          <div class="position-controls">
+            <button id="move-up-btn" class="arrow-btn" type="button" title="往上移動">▲</button>
+            <button id="move-down-btn" class="arrow-btn" type="button" title="往下移動">▼</button>
+            <button id="reset-position-btn" class="reset-btn" type="button">重置</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>寵物行為</label>
+          <div class="toggle-row">
+            <span>顯示寵物</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="visibility-toggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <span>讓寵物走動</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="movement-toggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 寵物狀態區塊 -->
+      <div id="pet-stats" class="settings-section hidden">
+        <div class="section-title">寵物狀態</div>
+        <div class="stat-row">
+          <span>經驗值</span>
+          <span id="stat-xp">-</span>
+        </div>
+        <div class="stat-row">
+          <span>階段</span>
+          <span id="stat-stage">-</span>
+        </div>
+        <div class="stat-row">
+          <span>大小</span>
+          <span id="stat-scale">-</span>
+        </div>
+      </div>
+
+      <!-- 錯誤訊息 -->
+      <div id="error-message" class="error-message hidden"></div>
+
+      <!-- 版本資訊 -->
+      <div class="version-info">
+        <small>Discord Pet Overlay v1.0.0</small>
+      </div>
+    </div>
+    <script type="module" src="/src/settings-window.ts"></script>
+  </body>
+</html>

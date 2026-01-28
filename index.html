@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Discord Pet Overlay</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Discord 未運行警告 -->
+      <div id="discord-warning" class="discord-warning hidden">
+        <span>Discord 未運行</span>
+      </div>
+
+      <!-- 寵物容器 - 預設隱藏，連線後才顯示 -->
+      <div id="pet-container" class="hidden">
+        <div id="pet" class="pet"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
