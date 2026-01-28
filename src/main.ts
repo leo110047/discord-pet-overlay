@@ -52,12 +52,15 @@ async function init(): Promise<void> {
   if (monitor) {
     const scaleFactor = monitor.scaleFactor;
     screenWidth = Math.round(monitor.size.width / scaleFactor);
-    console.log('Screen width:', screenWidth, 'Scale factor:', scaleFactor);
+    const logicalScreenHeight = monitor.size.height / scaleFactor;
+    console.log('Screen width:', screenWidth, 'Screen height:', logicalScreenHeight, 'Scale factor:', scaleFactor);
 
     // 設定視窗寬度為螢幕寬度，X 座標固定為 0
     await mainWindow.setSize(new LogicalSize(screenWidth, WINDOW_HEIGHT));
+    // outerPosition 回傳物理像素，轉換成邏輯像素
     const currentPos = await mainWindow.outerPosition();
-    await mainWindow.setPosition(new LogicalPosition(0, currentPos.y));
+    const currentLogicalY = currentPos.y / scaleFactor;
+    await mainWindow.setPosition(new LogicalPosition(0, currentLogicalY));
   }
 
   // 初始化寵物
@@ -151,9 +154,8 @@ async function applyInitialPosition(): Promise<void> {
   // 確保不超出螢幕範圍
   newY = Math.max(0, Math.min(newY, logicalScreenHeight - WINDOW_HEIGHT));
 
-  const currentPosition = await mainWindow.outerPosition();
-  await mainWindow.setPosition(new LogicalPosition(currentPosition.x, newY));
-  console.log('Initial window position set to y:', newY);
+  await mainWindow.setPosition(new LogicalPosition(0, newY));
+  console.log('Initial window position set to y:', newY, '(scaleFactor:', scaleFactor, ')');
 }
 
 /**
@@ -297,8 +299,10 @@ async function moveWindow(direction: 'up' | 'down', step: number): Promise<void>
     const scaleFactor = monitor.scaleFactor;
     const logicalScreenHeight = screenHeight / scaleFactor;
 
+    // outerPosition 回傳的是物理像素，需要轉換成邏輯像素
     const currentPosition = await mainWindow.outerPosition();
-    let newY = currentPosition.y;
+    const currentLogicalY = currentPosition.y / scaleFactor;
+    let newY = currentLogicalY;
 
     if (direction === 'up') {
       newY -= step;
@@ -309,8 +313,8 @@ async function moveWindow(direction: 'up' | 'down', step: number): Promise<void>
     // 確保不超出螢幕範圍
     newY = Math.max(0, Math.min(newY, logicalScreenHeight - WINDOW_HEIGHT));
 
-    await mainWindow.setPosition(new LogicalPosition(currentPosition.x, newY));
-    console.log(`Window moved ${direction} to y=${newY}`);
+    await mainWindow.setPosition(new LogicalPosition(0, newY));
+    console.log(`Window moved ${direction} to y=${newY} (scaleFactor: ${scaleFactor})`);
 
     // 儲存新位置
     config.petWindowY = newY;
@@ -340,9 +344,8 @@ async function resetWindowPosition(): Promise<void> {
     // 重置到螢幕底部
     const newY = Math.round(logicalScreenHeight - WINDOW_HEIGHT);
 
-    const currentPosition = await mainWindow.outerPosition();
-    await mainWindow.setPosition(new LogicalPosition(currentPosition.x, newY));
-    console.log('Window position reset to bottom, y:', newY);
+    await mainWindow.setPosition(new LogicalPosition(0, newY));
+    console.log('Window position reset to bottom, y:', newY, '(scaleFactor:', scaleFactor, ')');
 
     // 儲存位置
     config.petWindowY = newY;
