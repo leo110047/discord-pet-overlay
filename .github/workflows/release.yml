@@ -65,57 +65,77 @@ jobs:
             **macOS 用戶請注意**：由於應用程式未經 Apple 簽名，首次安裝後需要到「系統偏好設定 > 安全性與隱私」允許執行，或是按住 Control 鍵點擊應用程式選擇「打開」。
           releaseDraft: true
           prerelease: false
+          uploadUpdaterSignatures: true
           args: ${{ matrix.args }}
 
-      # 手動上傳 tauri-action 漏掉的 .sig 和 .nsis.zip 檔案
-      - name: Upload missing artifacts (macOS)
+      # tauri-action bug: 產生了 .sig 檔案但沒有上傳
+      # 手動上傳 .sig 檔案 (使用 ls 和 while 處理空格檔名)
+      - name: Upload signature files (macOS)
         if: matrix.platform == 'macos-latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Looking for .sig files ==="
-          find src-tauri/target -name "*.app.tar.gz.sig" -type f 2>/dev/null || true
+          echo "=== Listing all files in bundle directory ==="
+          ls -la src-tauri/target/*/release/bundle/macos/ || true
 
           echo "=== Uploading .sig files ==="
-          for sig_file in $(find src-tauri/target -name "*.app.tar.gz.sig" -type f 2>/dev/null); do
-            echo "Found: $sig_file"
-            # 取得檔名
-            filename=$(basename "$sig_file")
-            # 根據路徑判斷架構
-            if [[ "$sig_file" == *"aarch64"* ]]; then
-              new_filename="Discord.Pet.Overlay_aarch64.app.tar.gz.sig"
-            else
-              new_filename="Discord.Pet.Overlay_x64.app.tar.gz.sig"
-            fi
-            echo "Uploading as: $new_filename"
-            gh release upload "${{ github.ref_name }}" "$sig_file#$new_filename" --clobber || true
-          done
+          # 處理 aarch64 或 x86_64 target
+          if [[ "${{ matrix.args }}" == *"aarch64"* ]]; then
+            arch="aarch64"
+            target_dir="src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
+          else
+            arch="x64"
+            target_dir="src-tauri/target/x86_64-apple-darwin/release/bundle/macos"
+          fi
 
-      - name: Upload missing artifacts (Windows)
+          # 找到 .app.tar.gz.sig 檔案並上傳
+          if ls "$target_dir"/*.app.tar.gz.sig 1> /dev/null 2>&1; then
+            for sig_file in "$target_dir"/*.app.tar.gz.sig; do
+              echo "Found: $sig_file"
+              new_filename="Discord.Pet.Overlay_${arch}.app.tar.gz.sig"
+              echo "Uploading as: $new_filename"
+              gh release upload "${{ github.ref_name }}" "$sig_file#$new_filename" --clobber || true
+            done
+          else
+            echo "No .sig files found in $target_dir"
+          fi
+
+      - name: Upload signature files (Windows)
         if: matrix.platform == 'windows-latest'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "=== Looking for .nsis.zip and .sig files ==="
-          find src-tauri/target -name "*.nsis.zip" -type f 2>/dev/null || true
-          find src-tauri/target -name "*.nsis.zip.sig" -type f 2>/dev/null || true
-
-          echo "=== Uploading .nsis.zip files ==="
-          for zip_file in $(find src-tauri/target -name "*.nsis.zip" -type f 2>/dev/null); do
-            echo "Found: $zip_file"
-            filename=$(basename "$zip_file")
-            echo "Uploading: $filename"
-            gh release upload "${{ github.ref_name }}" "$zip_file" --clobber || true
-          done
+          echo "=== Listing all files in nsis directory ==="
+          ls -la src-tauri/target/release/bundle/nsis/ || true
 
           echo "=== Uploading .nsis.zip.sig files ==="
-          for sig_file in $(find src-tauri/target -name "*.nsis.zip.sig" -type f 2>/dev/null); do
-            echo "Found: $sig_file"
-            filename=$(basename "$sig_file")
-            echo "Uploading: $filename"
-            gh release upload "${{ github.ref_name }}" "$sig_file" --clobber || true
-          done
+          target_dir="src-tauri/target/release/bundle/nsis"
+
+          if ls "$target_dir"/*.nsis.zip.sig 1> /dev/null 2>&1; then
+            for sig_file in "$target_dir"/*.nsis.zip.sig; do
+              echo "Found: $sig_file"
+              filename=$(basename "$sig_file")
+              echo "Uploading: $filename"
+              gh release upload "${{ github.ref_name }}" "$sig_file" --clobber || true
+            done
+          else
+            echo "No .nsis.zip.sig files found in $target_dir"
+          fi
+
+          echo "=== Uploading .nsis.zip files ==="
+          if ls "$target_dir"/*.nsis.zip 1> /dev/null 2>&1; then
+            for zip_file in "$target_dir"/*.nsis.zip; do
+              if [[ ! "$zip_file" == *.sig ]]; then
+                echo "Found: $zip_file"
+                filename=$(basename "$zip_file")
+                echo "Uploading: $filename"
+                gh release upload "${{ github.ref_name }}" "$zip_file" --clobber || true
+              fi
+            done
+          else
+            echo "No .nsis.zip files found in $target_dir"
+          fi
 
   publish:
     needs: build
@@ -161,6 +181,12 @@ jobs:
             let darwinX64Sig = '';
             let windowsSig = '';
 
+            // tauri-action uploads signatures with names based on the target path
+            // macOS aarch64: Discord.Pet.Overlay_aarch64.app.tar.gz.sig (from aarch64-apple-darwin target)
+            // macOS x64: Discord.Pet.Overlay_x64.app.tar.gz.sig (from x86_64-apple-darwin target)
+            // Windows: Discord.Pet.Overlay_x64-setup.nsis.zip.sig
+            // But the actual names may vary - let's match more flexibly
+
             for (const asset of assets.data) {
               if (asset.name.endsWith('.sig')) {
                 console.log(`\nReading signature: ${asset.name}`);
@@ -178,12 +204,18 @@ jobs:
                   console.log(`  Content length: ${sigContent.length}`);
                   console.log(`  Preview: ${sigContent.substring(0, 50)}...`);
 
-                  if (asset.name.includes('aarch64') && asset.name.includes('.app.tar.gz.sig')) {
-                    darwinAarch64Sig = sigContent;
-                    console.log(`  -> Assigned to darwin-aarch64`);
-                  } else if (asset.name.includes('x64') && asset.name.includes('.app.tar.gz.sig')) {
-                    darwinX64Sig = sigContent;
-                    console.log(`  -> Assigned to darwin-x86_64`);
+                  // Match macOS signatures - tauri-action names them based on target
+                  if (asset.name.includes('.app.tar.gz.sig')) {
+                    if (asset.name.includes('aarch64')) {
+                      darwinAarch64Sig = sigContent;
+                      console.log(`  -> Assigned to darwin-aarch64`);
+                    } else if (asset.name.includes('x64') || asset.name.includes('x86_64')) {
+                      darwinX64Sig = sigContent;
+                      console.log(`  -> Assigned to darwin-x86_64`);
+                    } else {
+                      // If no arch in name, try to determine from other clues or log for debug
+                      console.log(`  -> Unknown macOS arch, name: ${asset.name}`);
+                    }
                   } else if (asset.name.includes('.nsis.zip.sig')) {
                     windowsSig = sigContent;
                     console.log(`  -> Assigned to windows-x86_64`);
@@ -203,10 +235,15 @@ jobs:
             let windowsFile = '';
 
             for (const asset of assets.data) {
-              if (asset.name.includes('aarch64') && asset.name.endsWith('.app.tar.gz')) {
-                darwinAarch64File = asset.name;
-              } else if (asset.name.includes('x64') && asset.name.endsWith('.app.tar.gz')) {
-                darwinX64File = asset.name;
+              // Match the update bundles (not DMG/MSI installers)
+              if (asset.name.endsWith('.app.tar.gz') && !asset.name.endsWith('.sig')) {
+                if (asset.name.includes('aarch64')) {
+                  darwinAarch64File = asset.name;
+                } else if (asset.name.includes('x64') || asset.name.includes('x86_64')) {
+                  darwinX64File = asset.name;
+                } else {
+                  console.log(`  -> Unknown macOS arch for tar.gz: ${asset.name}`);
+                }
               } else if (asset.name.endsWith('.nsis.zip') && !asset.name.endsWith('.sig')) {
                 windowsFile = asset.name;
               }
