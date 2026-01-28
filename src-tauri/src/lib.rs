@@ -4,8 +4,11 @@ use sysinfo::System;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    ActivationPolicy, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder,
+    Manager, WebviewUrl, WebviewWindowBuilder,
 };
+
+#[cfg(target_os = "macos")]
+use tauri::{ActivationPolicy, RunEvent};
 
 /// 檢查 Discord 是否正在運行
 #[tauri::command]
@@ -98,10 +101,11 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app, event| {
+        .run(|_app, _event| {
             // 處理 macOS Dock 圖示點擊（reopen 事件）
-            if let RunEvent::Reopen { .. } = event {
-                open_settings_window(app);
+            #[cfg(target_os = "macos")]
+            if let RunEvent::Reopen { .. } = _event {
+                open_settings_window(_app);
             }
         });
 }
