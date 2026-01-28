@@ -381,6 +381,21 @@ input:checked + .toggle-slider:before {
   font-size: 12px;
 }
 
+/* 關於區塊 */
+.about-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 14px;
+  color: #b5bac1;
+  margin-bottom: 12px;
+}
+
+.about-row span:last-child {
+  color: #fff;
+  font-weight: 500;
+}
+
 /* 隱藏元素 */
 .hidden {
   display: none !important;

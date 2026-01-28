@@ -62,5 +62,12 @@
       "icons/icon.ico"
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://api.leo-pet-api.com/update/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhBMDgwQUIxN0FBQkREQUIKUldTcjNhdDZzUW9JaWtmZzBxdGExZ05pc1A3Z1QvMFRGb0JnZ0hWbkZRbGF0cFlsZGF0bjJYNjIK"
+    }
+  }
 }

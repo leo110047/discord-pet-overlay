@@ -3,7 +3,9 @@
  */
 
 import { emitTo } from '@tauri-apps/api/event';
-import { ask } from '@tauri-apps/plugin-dialog';
+import { ask, message } from '@tauri-apps/plugin-dialog';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { createApiClient, ApiError } from './api';
 import {
   loadConfig,
@@ -44,6 +46,8 @@ let elements: {
   visibilityToggle: HTMLInputElement | null;
   movementToggle: HTMLInputElement | null;
   logoutBtn: HTMLButtonElement | null;
+  checkUpdateBtn: HTMLButtonElement | null;
+  appVersion: HTMLElement | null;
 };
 
 /**
@@ -74,6 +78,8 @@ async function init(): Promise<void> {
     visibilityToggle: document.getElementById('visibility-toggle') as HTMLInputElement,
     movementToggle: document.getElementById('movement-toggle') as HTMLInputElement,
     logoutBtn: document.getElementById('logout-btn') as HTMLButtonElement,
+    checkUpdateBtn: document.getElementById('check-update-btn') as HTMLButtonElement,
+    appVersion: document.getElementById('app-version'),
   };
 
   // 載入設定
@@ -278,6 +284,12 @@ function setupEventListeners(): void {
       await emitTo('main', 'logged-out', {});
     }
   });
+
+  // 檢查更新按鈕
+  elements.checkUpdateBtn?.addEventListener('click', async () => {
+    console.log('Check update button clicked');
+    await checkForUpdates();
+  });
 }
 
 /**
@@ -476,6 +488,84 @@ function showSuccess(message: string): void {
         elements.errorMessage.style.color = '';
       }
     }, 5000);
+  }
+}
+
+/**
+ * 檢查更新
+ */
+async function checkForUpdates(): Promise<void> {
+  if (!elements.checkUpdateBtn) return;
+
+  const originalText = elements.checkUpdateBtn.textContent;
+  elements.checkUpdateBtn.disabled = true;
+  elements.checkUpdateBtn.textContent = '檢查中...';
+
+  try {
+    const update = await check();
+
+    if (update) {
+      console.log('Update available:', update.version);
+
+      const confirmed = await ask(
+        `發現新版本 v${update.version}！\n\n更新內容：\n${update.body || '無說明'}\n\n是否立即下載並安裝？`,
+        {
+          title: '發現更新',
+          kind: 'info',
+          okLabel: '更新',
+          cancelLabel: '稍後',
+        }
+      );
+
+      if (confirmed) {
+        elements.checkUpdateBtn.textContent = '下載中...';
+
+        // 下載並安裝更新
+        let contentLength = 0;
+        let downloaded = 0;
+        await update.downloadAndInstall((event) => {
+          if (event.event === 'Started') {
+            contentLength = (event.data as { contentLength?: number }).contentLength || 0;
+            console.log(`Download started, size: ${contentLength}`);
+          } else if (event.event === 'Progress') {
+            downloaded += (event.data as { chunkLength: number }).chunkLength;
+            if (contentLength > 0) {
+              const percent = Math.round((downloaded / contentLength) * 100);
+              elements.checkUpdateBtn!.textContent = `下載中... ${percent}%`;
+            }
+          } else if (event.event === 'Finished') {
+            console.log('Download finished');
+          }
+        });
+
+        // 詢問是否重新啟動
+        const restartConfirmed = await ask('更新已下載完成，是否立即重新啟動？', {
+          title: '更新完成',
+          kind: 'info',
+          okLabel: '重新啟動',
+          cancelLabel: '稍後',
+        });
+
+        if (restartConfirmed) {
+          await relaunch();
+        }
+      }
+    } else {
+      console.log('No update available');
+      await message('目前已是最新版本！', {
+        title: '檢查更新',
+        kind: 'info',
+      });
+    }
+  } catch (error) {
+    console.error('Failed to check for updates:', error);
+    await message(`檢查更新失敗：${String(error)}`, {
+      title: '錯誤',
+      kind: 'error',
+    });
+  } finally {
+    elements.checkUpdateBtn!.disabled = false;
+    elements.checkUpdateBtn!.textContent = originalText;
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "discord-pet-overlay",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Discord 桌面寵物 Overlay - 讓你的社群互動成為寵物成長的動力",
   "type": "module",
   "scripts": {
@@ -44,6 +44,8 @@
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.6.0",
-    "@tauri-apps/plugin-store": "^2.0.0"
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-store": "^2.0.0",
+    "@tauri-apps/plugin-updater": "^2.9.0"
   }
 }
