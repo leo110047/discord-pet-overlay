@@ -57,85 +57,17 @@ jobs:
             ## 更新內容
 
             ### ${{ github.ref_name }}
-            - 新增應用程式內更新功能
-            - 修正 Windows 上調整寵物垂直位置無效的問題
+            - 新增應用程式內自動更新功能
+            - 修正 Windows 上調整寵物垂直位置無效的問題（DPI 縮放）
+            - 設定頁面新增「關於」區塊，顯示版本資訊與檢查更新按鈕
 
             ---
 
             **macOS 用戶請注意**：由於應用程式未經 Apple 簽名，首次安裝後需要到「系統偏好設定 > 安全性與隱私」允許執行，或是按住 Control 鍵點擊應用程式選擇「打開」。
           releaseDraft: true
           prerelease: false
-          uploadUpdaterSignatures: true
+          includeUpdaterJson: true
           args: ${{ matrix.args }}
-
-      # tauri-action bug: 產生了 .sig 檔案但沒有上傳
-      # 手動上傳 .sig 檔案 (使用 ls 和 while 處理空格檔名)
-      - name: Upload signature files (macOS)
-        if: matrix.platform == 'macos-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "=== Listing all files in bundle directory ==="
-          ls -la src-tauri/target/*/release/bundle/macos/ || true
-
-          echo "=== Uploading .sig files ==="
-          # 處理 aarch64 或 x86_64 target
-          if [[ "${{ matrix.args }}" == *"aarch64"* ]]; then
-            arch="aarch64"
-            target_dir="src-tauri/target/aarch64-apple-darwin/release/bundle/macos"
-          else
-            arch="x64"
-            target_dir="src-tauri/target/x86_64-apple-darwin/release/bundle/macos"
-          fi
-
-          # 找到 .app.tar.gz.sig 檔案並上傳
-          if ls "$target_dir"/*.app.tar.gz.sig 1> /dev/null 2>&1; then
-            for sig_file in "$target_dir"/*.app.tar.gz.sig; do
-              echo "Found: $sig_file"
-              new_filename="Discord.Pet.Overlay_${arch}.app.tar.gz.sig"
-              echo "Uploading as: $new_filename"
-              gh release upload "${{ github.ref_name }}" "$sig_file#$new_filename" --clobber || true
-            done
-          else
-            echo "No .sig files found in $target_dir"
-          fi
-
-      - name: Upload signature files (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "=== Listing all files in nsis directory ==="
-          ls -la src-tauri/target/release/bundle/nsis/ || true
-
-          echo "=== Uploading .nsis.zip.sig files ==="
-          target_dir="src-tauri/target/release/bundle/nsis"
-
-          if ls "$target_dir"/*.nsis.zip.sig 1> /dev/null 2>&1; then
-            for sig_file in "$target_dir"/*.nsis.zip.sig; do
-              echo "Found: $sig_file"
-              filename=$(basename "$sig_file")
-              echo "Uploading: $filename"
-              gh release upload "${{ github.ref_name }}" "$sig_file" --clobber || true
-            done
-          else
-            echo "No .nsis.zip.sig files found in $target_dir"
-          fi
-
-          echo "=== Uploading .nsis.zip files ==="
-          if ls "$target_dir"/*.nsis.zip 1> /dev/null 2>&1; then
-            for zip_file in "$target_dir"/*.nsis.zip; do
-              if [[ ! "$zip_file" == *.sig ]]; then
-                echo "Found: $zip_file"
-                filename=$(basename "$zip_file")
-                echo "Uploading: $filename"
-                gh release upload "${{ github.ref_name }}" "$zip_file" --clobber || true
-              fi
-            done
-          else
-            echo "No .nsis.zip files found in $target_dir"
-          fi
 
   publish:
     needs: build
