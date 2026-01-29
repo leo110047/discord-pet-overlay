@@ -32,9 +32,11 @@ export async function loadConfig(): Promise<AppConfig> {
     const userId = await s.get<string>('userId') ?? DEFAULT_CONFIG.userId;
     const tokenExpiresAt = await s.get<string>('tokenExpiresAt') ?? DEFAULT_CONFIG.tokenExpiresAt;
     const pollIntervalMinutes = await s.get<number>('pollIntervalMinutes') ?? DEFAULT_CONFIG.pollIntervalMinutes;
-    const lastPetState = await s.get<PetState>('lastPetState') ?? DEFAULT_CONFIG.lastPetState;
+    const allPets = await s.get<PetState[]>('allPets') ?? DEFAULT_CONFIG.allPets;
+    const selectedPetIds = await s.get<string[]>('selectedPetIds') ?? DEFAULT_CONFIG.selectedPetIds;
     const windowPosition = await s.get<{ x: number; y: number }>('windowPosition') ?? DEFAULT_CONFIG.windowPosition;
     const petWindowY = await s.get<number>('petWindowY') ?? DEFAULT_CONFIG.petWindowY;
+    const windowWidth = await s.get<number>('windowWidth') ?? DEFAULT_CONFIG.windowWidth;
     const petMovementEnabled = await s.get<boolean>('petMovementEnabled') ?? DEFAULT_CONFIG.petMovementEnabled;
     const petVisible = await s.get<boolean>('petVisible') ?? DEFAULT_CONFIG.petVisible;
 
@@ -44,9 +46,11 @@ export async function loadConfig(): Promise<AppConfig> {
       userId,
       tokenExpiresAt,
       pollIntervalMinutes,
-      lastPetState,
+      allPets,
+      selectedPetIds,
       windowPosition,
       petWindowY,
+      windowWidth,
       petMovementEnabled,
       petVisible,
     };
@@ -111,10 +115,17 @@ export async function savePollInterval(minutes: number): Promise<void> {
 }
 
 /**
- * 儲存寵物狀態
+ * 儲存所有寵物狀態
  */
-export async function savePetState(state: PetState): Promise<void> {
-  await saveConfig({ lastPetState: state });
+export async function saveAllPets(pets: PetState[]): Promise<void> {
+  await saveConfig({ allPets: pets });
+}
+
+/**
+ * 儲存選擇的寵物 ID 列表
+ */
+export async function saveSelectedPetIds(ids: string[]): Promise<void> {
+  await saveConfig({ selectedPetIds: ids });
 }
 
 /**
@@ -143,6 +154,17 @@ export async function savePetMovementEnabled(enabled: boolean): Promise<void> {
  */
 export async function savePetVisible(visible: boolean): Promise<void> {
   await saveConfig({ petVisible: visible });
+}
+
+/**
+ * 儲存視窗配置（位置和寬度）
+ */
+export async function saveWindowConfig(x: number, y: number, width: number): Promise<void> {
+  await saveConfig({
+    windowPosition: { x, y },
+    petWindowY: y,
+    windowWidth: width,
+  });
 }
 
 /**

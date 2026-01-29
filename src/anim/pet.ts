@@ -2,89 +2,36 @@
  * 寵物動畫模組
  *
  * 負責控制寵物的移動、動畫和外觀
+ * 支援多隻寵物同時顯示
  */
 
-import { PetStage, PetState } from '../types';
+import { PetState } from '../types';
+import { getSpriteUrl as fetchSpriteUrl } from '../store/spriteCache';
 
-// 寵物素材 Base64 (簡易像素風格)
-// egg: 藍色蛋形
-const EGG_SPRITE = `data:image/svg+xml,${encodeURIComponent(`
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <ellipse cx="32" cy="36" rx="20" ry="24" fill="#5865f2"/>
-  <ellipse cx="32" cy="36" rx="16" ry="20" fill="#7289da"/>
-  <ellipse cx="26" cy="28" rx="4" ry="6" fill="#ffffff" opacity="0.3"/>
-</svg>
-`)}`;
-
-// teen: 小型寵物
-const TEEN_SPRITE = `data:image/svg+xml,${encodeURIComponent(`
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <!-- 身體 -->
-  <ellipse cx="32" cy="44" rx="18" ry="16" fill="#5865f2"/>
-  <!-- 頭 -->
-  <circle cx="32" cy="26" r="14" fill="#7289da"/>
-  <!-- 眼睛 -->
-  <circle cx="26" cy="24" r="4" fill="#ffffff"/>
-  <circle cx="38" cy="24" r="4" fill="#ffffff"/>
-  <circle cx="27" cy="25" r="2" fill="#2c2f33"/>
-  <circle cx="39" cy="25" r="2" fill="#2c2f33"/>
-  <!-- 嘴巴 -->
-  <path d="M28 32 Q32 36 36 32" stroke="#2c2f33" stroke-width="2" fill="none"/>
-  <!-- 腳 -->
-  <ellipse cx="24" cy="56" rx="6" ry="4" fill="#4752c4"/>
-  <ellipse cx="40" cy="56" rx="6" ry="4" fill="#4752c4"/>
-</svg>
-`)}`;
-
-// adult: 完整寵物
-const ADULT_SPRITE = `data:image/svg+xml,${encodeURIComponent(`
-<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <!-- 身體 -->
-  <ellipse cx="32" cy="42" rx="22" ry="18" fill="#5865f2"/>
-  <!-- 頭 -->
-  <circle cx="32" cy="22" r="16" fill="#7289da"/>
-  <!-- 耳朵 -->
-  <ellipse cx="18" cy="10" rx="6" ry="10" fill="#7289da"/>
-  <ellipse cx="46" cy="10" rx="6" ry="10" fill="#7289da"/>
-  <ellipse cx="18" cy="10" rx="4" ry="7" fill="#5865f2"/>
-  <ellipse cx="46" cy="10" rx="4" ry="7" fill="#5865f2"/>
-  <!-- 眼睛 -->
-  <circle cx="24" cy="20" r="5" fill="#ffffff"/>
-  <circle cx="40" cy="20" r="5" fill="#ffffff"/>
-  <circle cx="25" cy="21" r="3" fill="#2c2f33"/>
-  <circle cx="41" cy="21" r="3" fill="#2c2f33"/>
-  <circle cx="26" cy="20" r="1" fill="#ffffff"/>
-  <circle cx="42" cy="20" r="1" fill="#ffffff"/>
-  <!-- 鼻子 -->
-  <ellipse cx="32" cy="28" rx="3" ry="2" fill="#4752c4"/>
-  <!-- 嘴巴 -->
-  <path d="M26 32 Q32 38 38 32" stroke="#2c2f33" stroke-width="2" fill="none"/>
-  <!-- 腳 -->
-  <ellipse cx="22" cy="58" rx="8" ry="5" fill="#4752c4"/>
-  <ellipse cx="42" cy="58" rx="8" ry="5" fill="#4752c4"/>
-  <!-- 尾巴 -->
-  <ellipse cx="54" cy="45" rx="8" ry="6" fill="#7289da" transform="rotate(-30 54 45)"/>
-</svg>
-`)}`;
+/** API 伺服器 URL（由外部設定） */
+let apiBaseUrl: string = '';
 
 /**
- * 取得階段對應的素材
+ * 設定 API 伺服器 URL
  */
-function getSpriteForStage(stage: PetStage): string {
-  switch (stage) {
-    case 'egg':
-      return EGG_SPRITE;
-    case 'teen':
-      return TEEN_SPRITE;
-    case 'adult':
-      return ADULT_SPRITE;
-    default:
-      return EGG_SPRITE;
-  }
+export function setApiBaseUrl(url: string): void {
+  apiBaseUrl = url.replace(/\/$/, '');
 }
 
 /**
- * 寵物控制器
+ * 取得 Sprite 完整 URL
+ * 優先從快取取得，沒有則從 API 下載
+ */
+async function getSpriteUrl(spritePath: string): Promise<string> {
+  if (!apiBaseUrl) {
+    console.warn('API base URL not set, cannot load sprite');
+    return '';
+  }
+  return fetchSpriteUrl(apiBaseUrl, spritePath);
+}
+
+/**
+ * 單一寵物控制器
  */
 export class PetController {
   private element: HTMLElement;
@@ -93,25 +40,35 @@ export class PetController {
   private direction: 1 | -1 = 1; // 1 = 右, -1 = 左
   private speed: number = 1;
   private scale: number = 1;
-  private stage: PetStage = 'egg';
   private animationFrameId: number | null = null;
   private isPaused: boolean = false;
-  private isMovementEnabled: boolean = true; // 是否啟用移動
+  private isMovementEnabled: boolean = true;
+  private petId: string = '';
+  private spritePath: string = '';
 
-  constructor(element: HTMLElement, containerWidth: number) {
+  constructor(element: HTMLElement, containerWidth: number, initialX?: number) {
     this.element = element;
     this.containerWidth = containerWidth;
-    this.x = 50; // 初始位置
+    this.x = initialX ?? Math.random() * (containerWidth - 100) + 50;
+    this.direction = Math.random() > 0.5 ? 1 : -1;
     this.updatePosition();
-    this.updateSprite();
+    this.updateDirection();
+  }
+
+  /**
+   * 取得寵物 ID
+   */
+  getPetId(): string {
+    return this.petId;
   }
 
   /**
    * 更新寵物狀態
    */
   updateState(state: PetState): void {
+    this.petId = state.odangoId;
     this.scale = state.scale;
-    this.stage = state.stage;
+    this.spritePath = state.spritePath;
     this.updateSprite();
     this.updateScale();
   }
@@ -120,8 +77,21 @@ export class PetController {
    * 更新素材
    */
   private updateSprite(): void {
-    const sprite = getSpriteForStage(this.stage);
-    this.element.style.backgroundImage = `url("${sprite}")`;
+    if (this.spritePath) {
+      // 先設定 fallback 背景色，確保視窗可見
+      this.element.style.backgroundColor = '#7c3aed';
+      this.element.style.borderRadius = '50%';
+
+      // 非同步載入 sprite
+      getSpriteUrl(this.spritePath).then(spriteUrl => {
+        if (spriteUrl) {
+          this.element.style.backgroundImage = `url("${spriteUrl}")`;
+          this.element.style.backgroundColor = 'transparent';
+        }
+      }).catch(err => {
+        console.error('Failed to load sprite:', err);
+      });
+    }
   }
 
   /**
@@ -253,19 +223,186 @@ export class PetController {
   }
 
   /**
+   * 取得 DOM 元素
+   */
+  getElement(): HTMLElement {
+    return this.element;
+  }
+
+  /**
    * 銷毀
    */
   destroy(): void {
     this.stop();
+    this.element.remove();
   }
 }
 
 /**
- * 建立寵物控制器
+ * 多寵物管理器
+ */
+export class MultiPetManager {
+  private container: HTMLElement;
+  private containerWidth: number;
+  private controllers: Map<string, PetController> = new Map();
+  private isMovementEnabled: boolean = true;
+  private onPetClick: ((petId: string) => void) | null = null;
+
+  constructor(container: HTMLElement, containerWidth: number) {
+    this.container = container;
+    this.containerWidth = containerWidth;
+  }
+
+  /**
+   * 設定寵物點擊回調
+   */
+  setOnPetClick(callback: (petId: string) => void): void {
+    this.onPetClick = callback;
+  }
+
+  /**
+   * 更新顯示的寵物列表
+   */
+  updatePets(pets: PetState[]): void {
+    const currentIds = new Set(this.controllers.keys());
+    const newIds = new Set(pets.map(p => p.odangoId));
+
+    // 移除不在列表中的寵物
+    for (const id of currentIds) {
+      if (!newIds.has(id)) {
+        this.removePet(id);
+      }
+    }
+
+    // 新增或更新寵物
+    for (const pet of pets) {
+      if (this.controllers.has(pet.odangoId)) {
+        // 更新現有寵物
+        this.controllers.get(pet.odangoId)!.updateState(pet);
+      } else {
+        // 新增寵物
+        this.addPet(pet);
+      }
+    }
+  }
+
+  /**
+   * 新增寵物
+   */
+  private addPet(pet: PetState): void {
+    // 建立 DOM 元素
+    const element = document.createElement('div');
+    element.className = 'pet';
+    element.dataset.petId = pet.odangoId;
+    this.container.appendChild(element);
+
+    // 建立控制器
+    const controller = new PetController(element, this.containerWidth);
+    controller.updateState(pet);
+    controller.setMovementEnabled(this.isMovementEnabled);
+    controller.start();
+
+    // 綁定點擊事件
+    element.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.onPetClick) {
+        this.onPetClick(pet.odangoId);
+      }
+    });
+
+    this.controllers.set(pet.odangoId, controller);
+  }
+
+  /**
+   * 移除寵物
+   */
+  private removePet(petId: string): void {
+    const controller = this.controllers.get(petId);
+    if (controller) {
+      controller.destroy();
+      this.controllers.delete(petId);
+    }
+  }
+
+  /**
+   * 設定容器寬度
+   */
+  setContainerWidth(width: number): void {
+    this.containerWidth = width;
+    for (const controller of this.controllers.values()) {
+      controller.setContainerWidth(width);
+    }
+  }
+
+  /**
+   * 設定是否啟用移動
+   */
+  setMovementEnabled(enabled: boolean): void {
+    this.isMovementEnabled = enabled;
+    for (const controller of this.controllers.values()) {
+      controller.setMovementEnabled(enabled);
+    }
+  }
+
+  /**
+   * 開始所有寵物動畫
+   */
+  startAll(): void {
+    for (const controller of this.controllers.values()) {
+      controller.start();
+    }
+  }
+
+  /**
+   * 停止所有寵物動畫
+   */
+  stopAll(): void {
+    for (const controller of this.controllers.values()) {
+      controller.stop();
+    }
+  }
+
+  /**
+   * 取得寵物數量
+   */
+  getPetCount(): number {
+    return this.controllers.size;
+  }
+
+  /**
+   * 清除所有寵物
+   */
+  clear(): void {
+    for (const controller of this.controllers.values()) {
+      controller.destroy();
+    }
+    this.controllers.clear();
+  }
+
+  /**
+   * 銷毀
+   */
+  destroy(): void {
+    this.clear();
+  }
+}
+
+/**
+ * 建立單一寵物控制器（向後相容）
  */
 export function createPetController(
   element: HTMLElement,
   containerWidth: number
 ): PetController {
   return new PetController(element, containerWidth);
+}
+
+/**
+ * 建立多寵物管理器
+ */
+export function createMultiPetManager(
+  container: HTMLElement,
+  containerWidth: number
+): MultiPetManager {
+  return new MultiPetManager(container, containerWidth);
 }

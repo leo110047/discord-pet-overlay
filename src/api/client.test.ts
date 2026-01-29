@@ -91,26 +91,81 @@ describe('ApiClient', () => {
     });
   });
 
-  describe('getPetState', () => {
+  describe('getPets', () => {
     it('should throw error when no token set', async () => {
-      await expect(client.getPetState()).rejects.toThrow(ApiError);
+      await expect(client.getPets()).rejects.toThrow(ApiError);
     });
 
-    it('should return pet state when token is set', async () => {
+    it('should return pets array when token is set', async () => {
       client.setToken('valid-token');
 
-      const mockResponse = {
-        userId: 'user-123',
-        xp: 500,
-        scale: 1.5,
-        stage: 'teen',
-        breakdown: {
-          msgCount: 100,
-          voiceMinutes: 200,
-          eventCount: 0,
+      const mockResponse = [
+        {
+          odangoId: 'pet-1',
+          userId: 'user-123',
+          species: 'slime',
+          xp: 500,
+          scale: 1.5,
+          stage: 'stage2',
+          spritePath: 'slime/stage2.gif',
+          pendingHatch: false,
+          isActive: true,
+          lastUpdatedAt: '2024-01-01T00:00:00.000Z',
         },
-        lastUpdatedAt: '2024-01-01T00:00:00.000Z',
-      };
+        {
+          odangoId: 'pet-2',
+          userId: 'user-123',
+          species: 'egg',
+          xp: 10,
+          scale: 1.0,
+          stage: 'egg',
+          spritePath: 'egg/egg.gif',
+          pendingHatch: false,
+          isActive: false,
+          lastUpdatedAt: '2024-01-02T00:00:00.000Z',
+        },
+      ];
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await client.getPets();
+
+      expect(result).toEqual(mockResponse);
+      expect(result).toHaveLength(2);
+      expect(result[0].isActive).toBe(true);
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:8787/api/me/pets',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer valid-token',
+          }),
+        })
+      );
+    });
+  });
+
+  describe('getPetState (deprecated)', () => {
+    it('should return first active pet', async () => {
+      client.setToken('valid-token');
+
+      const mockResponse = [
+        {
+          odangoId: 'pet-1',
+          userId: 'user-123',
+          species: 'slime',
+          xp: 500,
+          scale: 1.5,
+          stage: 'stage2',
+          spritePath: 'slime/stage2.gif',
+          pendingHatch: false,
+          isActive: true,
+          lastUpdatedAt: '2024-01-01T00:00:00.000Z',
+        },
+      ];
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -119,16 +174,8 @@ describe('ApiClient', () => {
 
       const result = await client.getPetState();
 
-      expect(result).toEqual(mockResponse);
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8787/api/me/pet-state',
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            Authorization: 'Bearer valid-token',
-          }),
-        })
-      );
+      expect(result.odangoId).toBe('pet-1');
+      expect(result.isActive).toBe(true);
     });
   });
 

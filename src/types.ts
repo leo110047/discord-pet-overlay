@@ -3,9 +3,14 @@
  */
 
 /**
+ * 寵物種類
+ */
+export type PetSpecies = 'egg' | 'slime' | 'fox' | 'dragon' | 'charmander' | 'agumon' | 'wooper' | 'diglett' | 'ditto';
+
+/**
  * 寵物成長階段
  */
-export type PetStage = 'egg' | 'teen' | 'adult';
+export type PetStage = 'egg' | 'stage1' | 'stage2' | 'stage3';
 
 /**
  * 寵物狀態
@@ -15,12 +20,22 @@ export interface PetState {
   odangoId: string;
   /** 擁有者 Discord user ID */
   userId: string;
+  /** 寵物種類 */
+  species: PetSpecies;
   /** 累積經驗值（永久） */
   xp: number;
   /** 寵物大小（1.0 ~ 1.6） */
   scale: number;
   /** 進化階段 */
   stage: PetStage;
+  /** Sprite 圖片路徑，如 'slime/stage1.gif' */
+  spritePath: string;
+  /** 是否等待孵化選擇 */
+  pendingHatch: boolean;
+  /** 孵化選項（僅 pendingHatch=true 時有值） */
+  hatchOptions?: string[];
+  /** 是否為當前使用的寵物 */
+  isActive?: boolean;
   /** 最後更新時間 */
   lastUpdatedAt: string;
 }
@@ -83,10 +98,15 @@ export interface AppConfig {
   userId: string | null;
   tokenExpiresAt: string | null;
   pollIntervalMinutes: number;
-  lastPetState: PetState | null;
+  /** 所有寵物狀態（快取） */
+  allPets: PetState[];
+  /** 選擇要顯示的寵物 ID 列表 */
+  selectedPetIds: string[];
   windowPosition: { x: number; y: number } | null;
   /** 寵物視窗 Y 座標（null 表示使用預設底部位置） */
   petWindowY: number | null;
+  /** 寵物視窗寬度（null 表示使用螢幕寬度） */
+  windowWidth: number | null;
   /** 寵物是否啟用移動（預設 true） */
   petMovementEnabled: boolean;
   /** 寵物是否顯示（預設 true） */
@@ -102,9 +122,11 @@ export const DEFAULT_CONFIG: AppConfig = {
   userId: null,
   tokenExpiresAt: null,
   pollIntervalMinutes: 60,
-  lastPetState: null,
+  allPets: [],
+  selectedPetIds: [],
   windowPosition: null,
   petWindowY: null,
+  windowWidth: null,
   petMovementEnabled: true,
   petVisible: true,
 };

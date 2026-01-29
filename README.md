@@ -1,99 +1,68 @@
-# Discord 桌面寵物 Overlay
+# ODANGO - Discord 桌面寵物
 
 一個 Tauri v2 桌面應用程式，讓你的 Discord 社群互動成為桌面寵物成長的動力。
 
 ## 功能特色
 
-- 🐾 **桌面寵物**：一隻會在螢幕底部走動的可愛寵物
-- 📈 **成長系統**：根據 Discord 活動（訊息、語音、遊戲）累積 XP，寵物會成長變大
+- 🐾 **桌面寵物**：可愛的寵物會在螢幕底部走動
+- 🐣 **多寵物系統**：從蛋開始孵化，可選擇不同種類的寵物
+- 📈 **成長系統**：根據 Discord 活動（訊息、語音、遊戲）累積 XP，寵物會成長進化
 - 🔄 **自動同步**：定時輪詢伺服器，寵物會自動成長，無需手動重整
 - 🔗 **配對連動**：使用 Discord ID 和 6 位數配對碼連結 Discord Bot
 - 💾 **持久儲存**：Token 和設定會自動保存，重啟不需重新配對
-- ⬆️ **位置調整**：可調整寵物在螢幕上的垂直位置
+- 🖱️ **互動模式**：按住 `Ctrl+O` 0.5 秒進入互動模式，可拖曳視窗位置和調整寬度
 - 👁️ **顯示控制**：可隨時顯示或隱藏寵物
 - 🚶 **移動控制**：可選擇讓寵物走動或靜止
 - 🔔 **系統托盤**：最小化到系統托盤，不佔用工作列
-- 🆕 **應用程式內更新**：可在設定頁面檢查並下載更新，無需重新下載安裝檔
+- 🆕 **應用程式內更新**：可在設定頁面檢查並下載更新
 
-## 寵物階段
+## 寵物系統
 
-| 階段 | XP 範圍 | 說明 |
-|------|---------|------|
-| 🥚 Egg | 0 - 199 | 蛋形態，等待孵化 |
-| 🐣 Teen | 200 - 799 | 幼年形態 |
-| 🐾 Adult | 800+ | 成年形態 |
+### 孵化流程
 
-寵物大小 (scale) = 1.0 + min(XP/1000, 0.6)，最大 1.6 倍
+1. 所有用戶從「蛋」開始
+2. 累積足夠 XP 後，蛋會孵化
+3. 孵化時 Bot 會私訊 3 個隨機寵物選項，由你選擇
+4. 選擇後寵物會出現在桌面上
 
-## 安裝依賴
+### 進化階段
 
-### 系統需求
+| 階段 | 說明 |
+|------|------|
+| 🥚 egg | 初始蛋形態 |
+| 🐣 stage1 | 孵化後第一階段 |
+| 🐾 stage2 | 第二階段進化（部分寵物） |
+| 🌟 stage3 | 最終階段進化（部分寵物） |
 
-- **Node.js** 18+
-- **Rust** (最新穩定版)
-- **macOS**: Xcode Command Line Tools
-- **Windows**: Visual Studio Build Tools 2019+
+*各寵物的進化門檻和可達階段不同*
 
-### 安裝 Rust（如果尚未安裝）
+### XP 獲取方式
 
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-```
+| 行為 | XP |
+|------|-----|
+| 發送訊息 | +1 |
+| 語音通話（每分鐘） | +2 |
+| 遊戲事件 | +20 |
 
-### 安裝專案依賴
+## 安裝
 
-```bash
-cd discord-pet-overlay
-npm install
-```
+### 下載安裝檔
 
-## 開發
+從 [Releases](https://github.com/leo110047/discord-pet-overlay/releases) 下載對應平台的安裝檔：
 
-### 啟動開發模式
+- **macOS**: `ODANGO_x.x.x_aarch64.dmg`（Apple Silicon）或 `ODANGO_x.x.x_x64.dmg`（Intel）
+- **Windows**: `ODANGO_x.x.x_x64-setup.exe`
 
-```bash
-npm run tauri dev
-```
+### macOS 注意事項
 
-這會同時啟動 Vite 開發伺服器和 Tauri 應用程式。
+由於應用程式未經 Apple 簽署，首次開啟時可能會出現安全警告：
 
-### 執行測試
-
-```bash
-npm test
-```
-
-### 執行 Lint
-
-```bash
-npm run lint
-npm run lint:fix  # 自動修復
-```
-
-### 格式化程式碼
-
-```bash
-npm run format
-```
-
-## 打包
-
-### macOS
-
-```bash
-npm run tauri build
-```
-
-產出檔案位於 `src-tauri/target/release/bundle/`
-
-### Windows
-
-```bash
-npm run tauri build
-```
-
-產出檔案位於 `src-tauri/target/release/bundle/`
+1. 右鍵點擊應用程式，選擇「打開」
+2. 在彈出的對話框中點擊「打開」
+3. 如果 DMG 被系統隔離，請在終端機執行：
+   ```bash
+   xattr -cr /Applications/ODANGO.app
+   ```
 
 ## 使用方式
 
@@ -116,21 +85,68 @@ npm run tauri build
    - 點擊「連結」按鈕
    - 連線成功後會顯示「已連線」，寵物會出現在螢幕上
 
+### 互動模式
+
+按住 `Ctrl+O`（macOS: `Cmd+O`）0.5 秒進入互動模式：
+
+- **拖曳移動**：點擊並拖曳視窗到任意位置
+- **調整寬度**：拖曳左右邊緣調整視窗寬度
+- **退出**：再次按住 `Ctrl+O` 0.5 秒退出互動模式
+
 ### 設定選項
 
-- **寵物垂直位置**：使用上下箭頭調整寵物在螢幕上的位置
+- **重置視窗位置**：將視窗重置回螢幕底部中央
 - **顯示寵物**：開關控制是否顯示寵物視窗
 - **讓寵物走動**：開關控制寵物是否左右移動
+- **選擇顯示的寵物**：如果有多隻寵物，可選擇要顯示哪些
 
 ### 系統托盤
 
 - 點擊托盤圖示可開啟設定視窗
 - 右鍵選單提供「設定」和「結束」選項
 
-### macOS Dock
+## 開發
 
-- 點擊 Dock 圖示可開啟設定視窗
-- 未登入時不會顯示寵物視窗
+### 系統需求
+
+- **Node.js** 18+
+- **Rust** (最新穩定版)
+- **macOS**: Xcode Command Line Tools
+- **Windows**: Visual Studio Build Tools 2019+
+
+### 安裝 Rust（如果尚未安裝）
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+```
+
+### 安裝專案依賴
+
+```bash
+cd discord-pet-overlay
+npm install
+```
+
+### 啟動開發模式
+
+```bash
+npm run tauri dev
+```
+
+### 執行測試
+
+```bash
+npm test
+```
+
+### 打包
+
+```bash
+npm run tauri build
+```
+
+產出檔案位於 `src-tauri/target/release/bundle/`
 
 ## 專案結構
 
@@ -140,11 +156,13 @@ discord-pet-overlay/
 │   ├── api/                # API Client
 │   │   └── client.ts       # HTTP 請求封裝
 │   ├── store/              # 設定儲存
-│   │   └── config.ts       # Tauri Store 封裝
+│   │   ├── config.ts       # Tauri Store 封裝
+│   │   └── spriteCache.ts  # Sprite 快取
 │   ├── anim/               # 動畫系統
 │   │   └── pet.ts          # 寵物控制器
 │   ├── main.ts             # 主視窗入口
 │   ├── settings-window.ts  # 設定視窗
+│   ├── interaction-mode.ts # 互動模式（拖曳、縮放）
 │   ├── styles.css          # 主視窗樣式
 │   ├── settings.css        # 設定視窗樣式
 │   └── types.ts            # TypeScript 類型
@@ -162,6 +180,19 @@ discord-pet-overlay/
 └── package.json
 ```
 
+## API 端點
+
+ODANGO 會連接到 Discord Bot 的 API：
+
+| 方法 | 端點 | 說明 |
+|------|------|------|
+| `POST` | `/api/link/request` | 請求發送配對碼到 Discord 私訊 |
+| `POST` | `/api/link/complete` | 驗證配對碼，取得 Token |
+| `GET` | `/api/me/pets` | 取得所有寵物狀態（需認證） |
+| `GET` | `/assets/*` | 取得寵物 Sprite 圖片 |
+| `GET` | `/api/health` | 健康檢查 |
+| `GET` | `/update/:target/:arch/:version` | 檢查應用程式更新 |
+
 ## 安全聲明
 
 ⚠️ **本程式不會蒐集任何鍵盤輸入或個人隱私資料**
@@ -173,18 +204,6 @@ discord-pet-overlay/
 - ❌ 不監控鍵盤輸入
 - ❌ 不擷取螢幕畫面
 - ❌ 不上傳個人資料
-
-## API 端點
-
-Overlay 會連接到 Discord Bot 的 API：
-
-| 方法 | 端點 | 說明 |
-|------|------|------|
-| `POST` | `/api/link/request` | 請求發送配對碼到 Discord 私訊 |
-| `POST` | `/api/link/complete` | 驗證配對碼，取得 Token |
-| `GET` | `/api/me/pet-state` | 取得寵物狀態（需認證） |
-| `GET` | `/api/health` | 健康檢查 |
-| `GET` | `/update/:target/:arch/:version` | 檢查應用程式更新 |
 
 ## 疑難排解
 
@@ -215,7 +234,18 @@ Overlay 會連接到 Discord Bot 的 API：
 
 1. 確認連線狀態為「已連線」
 2. 確認「顯示寵物」開關已開啟
-3. 嘗試點擊設定視窗的「重置」按鈕重置位置
+3. 點擊「重置視窗位置」按鈕
+4. 按住 `Ctrl+O` 進入互動模式，拖曳視窗到可見位置
+
+### macOS DMG 被當成損壞檔
+
+這是因為應用程式未經 Apple 開發者帳號簽署。請在終端機執行：
+
+```bash
+xattr -cr /Applications/ODANGO.app
+```
+
+或右鍵點擊應用程式選擇「打開」。
 
 ## 授權
 

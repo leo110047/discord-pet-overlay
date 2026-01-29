@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2/capability",
   "identifier": "default",
-  "description": "Default capabilities for Discord Pet Overlay",
+  "description": "Default capabilities for ODANGO",
   "windows": ["main", "settings"],
   "permissions": [
     "core:default",
@@ -30,6 +30,19 @@
     "updater:allow-check",
     "updater:allow-download-and-install",
     "process:allow-restart",
-    "process:allow-exit"
+    "process:allow-exit",
+    "global-shortcut:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister",
+    "global-shortcut:allow-is-registered",
+    "fs:default",
+    "fs:allow-exists",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-mkdir",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA/sprites/**" }]
+    }
   ]
 }

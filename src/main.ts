@@ -1,15 +1,16 @@
 /**
- * Discord Pet Overlay - 主程式入口（寵物 Overlay 視窗）
+ * ODANGO - 主程式入口（寵物 Overlay 視窗）
  */
 
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { WebviewWindow, getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { currentMonitor, LogicalPosition, LogicalSize } from '@tauri-apps/api/window';
-import { createPetController } from './anim';
+import { createMultiPetManager, MultiPetManager, setApiBaseUrl } from './anim';
 import { createApiClient, ApiClient, ApiError } from './api';
-import { loadConfig, savePetState, savePetWindowY, isTokenValid } from './store';
+import { loadConfig, saveAllPets, saveSelectedPetIds, saveWindowConfig, isTokenValid } from './store';
 import { AppConfig, PetState } from './types';
+import { initInteractionMode, updateWindowWidth } from './interaction-mode';
 
 // 視窗大小常數
 const WINDOW_HEIGHT = 200;
@@ -22,7 +23,7 @@ const DEFAULT_SERVER_URL = 'http://localhost:8787';
 
 // 全域狀態
 let config: AppConfig;
-let petController: ReturnType<typeof createPetController>;
+let petManager: MultiPetManager;
 let apiClient: ApiClient;
 let isConnected = false;
 let pollIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -31,7 +32,7 @@ let pollIntervalId: ReturnType<typeof setInterval> | null = null;
  * 初始化應用程式
  */
 async function init(): Promise<void> {
-  console.log('Initializing Discord Pet Overlay...');
+  console.log('Initializing ODANGO...');
 
   // 載入設定
   config = await loadConfig();
@@ -40,11 +41,12 @@ async function init(): Promise<void> {
   // 初始化 API Client
   const serverUrl = config.serverUrl || DEFAULT_SERVER_URL;
   apiClient = createApiClient(serverUrl);
+  setApiBaseUrl(serverUrl); // 設定 sprite 快取的 API 基礎 URL
   if (config.token) {
     apiClient.setToken(config.token);
   }
 
-  // 取得螢幕尺寸並調整視窗寬度為螢幕寬度
+  // 取得螢幕尺寸並調整視窗
   const mainWindow = getCurrentWebviewWindow();
   const monitor = await currentMonitor();
   let screenWidth = window.innerWidth;
@@ -55,18 +57,28 @@ async function init(): Promise<void> {
     const logicalScreenHeight = monitor.size.height / scaleFactor;
     console.log('Screen width:', screenWidth, 'Screen height:', logicalScreenHeight, 'Scale factor:', scaleFactor);
 
-    // 設定視窗寬度為螢幕寬度，X 座標固定為 0
-    await mainWindow.setSize(new LogicalSize(screenWidth, WINDOW_HEIGHT));
-    // outerPosition 回傳物理像素，轉換成邏輯像素
-    const currentPos = await mainWindow.outerPosition();
-    const currentLogicalY = currentPos.y / scaleFactor;
-    await mainWindow.setPosition(new LogicalPosition(0, currentLogicalY));
+    // 使用儲存的寬度或螢幕寬度
+    const windowWidthToUse = config.windowWidth || screenWidth;
+
+    // 設定視窗大小
+    await mainWindow.setSize(new LogicalSize(windowWidthToUse, WINDOW_HEIGHT));
+
+    // 套用儲存的視窗位置
+    const savedX = config.windowPosition?.x ?? 0;
+    const savedY = config.petWindowY ?? Math.round(logicalScreenHeight - WINDOW_HEIGHT);
+    await mainWindow.setPosition(new LogicalPosition(savedX, savedY));
+
+    screenWidth = windowWidthToUse;
   }
 
-  // 初始化寵物
-  const petElement = document.getElementById('pet')!;
+  // 初始化多寵物管理器
   const petContainer = document.getElementById('pet-container')!;
-  petController = createPetController(petElement, screenWidth);
+  petManager = createMultiPetManager(petContainer, screenWidth);
+
+  // 設定寵物點擊事件 - 打開設定視窗
+  petManager.setOnPetClick(() => {
+    openSettingsWindow();
+  });
 
   // 檢查是否已連線（有 token 且未過期）
   isConnected = !!config.token && isTokenValid(config.tokenExpiresAt);
@@ -78,38 +90,44 @@ async function init(): Promise<void> {
   });
 
   // 套用移動設定
-  petController.setMovementEnabled(config.petMovementEnabled);
+  petManager.setMovementEnabled(config.petMovementEnabled);
 
   // 檢查是否顯示寵物
-  const shouldShowPet = config.petVisible !== false && isConnected && config.lastPetState;
+  const hasPets = config.allPets.length > 0;
+  const shouldShowPet = config.petVisible !== false && isConnected && hasPets;
 
   if (shouldShowPet) {
     // 已連線且有寵物狀態且設定為顯示
-    console.log('Showing pet with state:', config.lastPetState);
-    petController.updateState(config.lastPetState!);
-    petController.start();
+    const petsToShow = getSelectedPets();
+    console.log('Showing pets:', petsToShow.length);
+    petManager.updatePets(petsToShow);
     petContainer.classList.remove('hidden');
     // 顯示主視窗
     await mainWindow.show();
   } else {
     // 隱藏寵物和主視窗
-    console.log('Hiding pet - visible:', config.petVisible, 'isConnected:', isConnected, 'lastPetState:', !!config.lastPetState);
+    console.log('Hiding pet - visible:', config.petVisible, 'isConnected:', isConnected, 'hasPets:', hasPets);
     petContainer.classList.add('hidden');
     // 未登入或設定為隱藏時，不顯示主視窗
   }
 
-  // 套用已儲存的視窗位置
-  await applyInitialPosition();
-
-  // 設定寵物點擊事件 - 打開設定視窗
-  petElement.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openSettingsWindow();
+  // 初始化互動模式（熱鍵喚醒調整視窗）
+  await initInteractionMode(screenWidth, WINDOW_HEIGHT, async (x, y, width) => {
+    // 視窗配置變更時的回調
+    console.log('Window config changed:', { x, y, width });
+    config.windowPosition = { x, y };
+    config.petWindowY = y;
+    config.windowWidth = width;
+    await saveWindowConfig(x, y, width);
+    // 更新寵物活動範圍
+    petManager.setContainerWidth(width);
+    updateWindowWidth(width);
   });
 
-  // 監聽視窗大小變更
+  // 監聯視窗大小變更
   window.addEventListener('resize', () => {
-    petController.setContainerWidth(window.innerWidth);
+    petManager.setContainerWidth(window.innerWidth);
+    updateWindowWidth(window.innerWidth);
   });
 
   // 監聽來自設定視窗的事件
@@ -127,35 +145,17 @@ async function init(): Promise<void> {
 }
 
 /**
- * 套用初始視窗位置
+ * 取得選擇要顯示的寵物
  */
-async function applyInitialPosition(): Promise<void> {
-  const mainWindow = getCurrentWebviewWindow();
-  const monitor = await currentMonitor();
-
-  if (!monitor) {
-    console.error('No monitor found');
-    return;
+function getSelectedPets(): PetState[] {
+  if (config.selectedPetIds.length === 0) {
+    // 如果沒有選擇，預設顯示 isActive 的寵物
+    const activePet = config.allPets.find(p => p.isActive);
+    return activePet ? [activePet] : (config.allPets.length > 0 ? [config.allPets[0]] : []);
   }
 
-  const screenHeight = monitor.size.height;
-  const scaleFactor = monitor.scaleFactor;
-  const logicalScreenHeight = screenHeight / scaleFactor;
-
-  // 如果有儲存的 Y 座標，使用它；否則使用預設（螢幕底部）
-  let newY: number;
-  if (config.petWindowY !== null && config.petWindowY > 0) {
-    newY = config.petWindowY;
-  } else {
-    // 預設在螢幕底部
-    newY = Math.round(logicalScreenHeight - WINDOW_HEIGHT);
-  }
-
-  // 確保不超出螢幕範圍
-  newY = Math.max(0, Math.min(newY, logicalScreenHeight - WINDOW_HEIGHT));
-
-  await mainWindow.setPosition(new LogicalPosition(0, newY));
-  console.log('Initial window position set to y:', newY, '(scaleFactor:', scaleFactor, ')');
+  // 根據選擇的 ID 過濾
+  return config.allPets.filter(p => config.selectedPetIds.includes(p.odangoId));
 }
 
 /**
@@ -174,7 +174,7 @@ async function openSettingsWindow(): Promise<void> {
     // 建立新的設定視窗
     const settingsWindow = new WebviewWindow('settings', {
       url: '/settings.html',
-      title: '設定 - Discord Pet Overlay',
+      title: '設定 - ODANGO',
       width: 400,
       height: 600,
       minWidth: 360,
@@ -196,40 +196,43 @@ async function openSettingsWindow(): Promise<void> {
 }
 
 /**
- * 設定事件監聯器
+ * 設定事件監聽器
  */
 async function setupEventListeners(): Promise<void> {
   const petContainer = document.getElementById('pet-container')!;
 
-  // 監聯移動位置事件
-  await listen<{ direction: 'up' | 'down'; step: number }>('move-position', async (event) => {
-    console.log('Move position:', event.payload);
-    await moveWindow(event.payload.direction, event.payload.step);
-  });
-
-  // 監聽重置位置事件
-  await listen('reset-position', async () => {
-    console.log('Reset position');
-    await resetWindowPosition();
-  });
-
-  // 監聽寵物狀態更新（連線成功時）
-  await listen<PetState>('pet-state-updated', async (event) => {
-    console.log('Pet state updated, showing pet');
+  // 監聽寵物列表更新（連線成功時）
+  await listen<PetState[]>('pets-updated', async (event) => {
+    console.log('Pets updated, count:', event.payload.length);
     isConnected = true;
-    config.lastPetState = event.payload;
-    await savePetState(event.payload);
-    petController.updateState(event.payload);
+    config.allPets = event.payload;
+    await saveAllPets(event.payload);
+
+    // 更新顯示的寵物
+    const petsToShow = getSelectedPets();
+    petManager.updatePets(petsToShow);
 
     // 顯示寵物並開始動畫
-    petContainer.classList.remove('hidden');
-    petController.start();
+    if (petsToShow.length > 0) {
+      petContainer.classList.remove('hidden');
 
-    // 顯示主視窗（如果設定為顯示）
-    if (config.petVisible !== false) {
-      const mainWindow = getCurrentWebviewWindow();
-      await mainWindow.show();
+      // 顯示主視窗（如果設定為顯示）
+      if (config.petVisible !== false) {
+        const mainWindow = getCurrentWebviewWindow();
+        await mainWindow.show();
+      }
     }
+  });
+
+  // 監聽選擇的寵物變更
+  await listen<string[]>('selected-pets-changed', async (event) => {
+    console.log('Selected pets changed:', event.payload);
+    config.selectedPetIds = event.payload;
+    await saveSelectedPetIds(event.payload);
+
+    // 更新顯示的寵物
+    const petsToShow = getSelectedPets();
+    petManager.updatePets(petsToShow);
   });
 
   // 監聯連線成功事件
@@ -250,9 +253,9 @@ async function setupEventListeners(): Promise<void> {
     stopPolling();
     // 清除 token
     apiClient.setToken(null);
-    // 隱藏寵物
+    // 清除寵物
+    petManager.clear();
     petContainer.classList.add('hidden');
-    petController.stop();
     // 隱藏主視窗
     const mainWindow = getCurrentWebviewWindow();
     await mainWindow.hide();
@@ -265,9 +268,10 @@ async function setupEventListeners(): Promise<void> {
     const mainWindow = getCurrentWebviewWindow();
     if (event.payload.visible) {
       await mainWindow.show();
-      if (isConnected && config.lastPetState) {
+      if (isConnected && config.allPets.length > 0) {
+        const petsToShow = getSelectedPets();
+        petManager.updatePets(petsToShow);
         petContainer.classList.remove('hidden');
-        petController.start();
       }
     } else {
       await mainWindow.hide();
@@ -278,81 +282,48 @@ async function setupEventListeners(): Promise<void> {
   await listen<{ enabled: boolean }>('movement-changed', (event) => {
     console.log('Movement changed:', event.payload.enabled);
     config.petMovementEnabled = event.payload.enabled;
-    petController.setMovementEnabled(event.payload.enabled);
+    petManager.setMovementEnabled(event.payload.enabled);
   });
-}
 
-/**
- * 移動視窗位置
- */
-async function moveWindow(direction: 'up' | 'down', step: number): Promise<void> {
-  try {
+  // 監聽重置視窗位置
+  await listen('reset-position', async () => {
+    console.log('=== Resetting window position ===');
     const mainWindow = getCurrentWebviewWindow();
     const monitor = await currentMonitor();
 
-    if (!monitor) {
-      console.error('No monitor found');
-      return;
-    }
+    if (monitor) {
+      const scaleFactor = monitor.scaleFactor;
+      const screenWidth = Math.round(monitor.size.width / scaleFactor);
+      const screenHeight = Math.round(monitor.size.height / scaleFactor);
+      const newY = screenHeight - WINDOW_HEIGHT;
 
-    const screenHeight = monitor.size.height;
-    const scaleFactor = monitor.scaleFactor;
-    const logicalScreenHeight = screenHeight / scaleFactor;
+      console.log('Screen:', screenWidth, 'x', screenHeight, 'scaleFactor:', scaleFactor);
+      console.log('New position: x=0, y=', newY, 'width=', screenWidth, 'height=', WINDOW_HEIGHT);
 
-    // outerPosition 回傳的是物理像素，需要轉換成邏輯像素
-    const currentPosition = await mainWindow.outerPosition();
-    const currentLogicalY = currentPosition.y / scaleFactor;
-    let newY = currentLogicalY;
+      // 先顯示視窗（避免在隱藏狀態下設定位置無效）
+      await mainWindow.show();
+      await mainWindow.setFocus();
 
-    if (direction === 'up') {
-      newY -= step;
+      // 重置為螢幕寬度和底部位置
+      await mainWindow.setSize(new LogicalSize(screenWidth, WINDOW_HEIGHT));
+      await mainWindow.setPosition(new LogicalPosition(0, newY));
+
+      // 更新設定
+      config.windowPosition = { x: 0, y: newY };
+      config.petWindowY = newY;
+      config.windowWidth = screenWidth;
+      config.petVisible = true;
+      await saveWindowConfig(0, newY, screenWidth);
+
+      // 更新寵物活動範圍
+      petManager.setContainerWidth(screenWidth);
+      updateWindowWidth(screenWidth);
+
+      console.log('Window position reset complete');
     } else {
-      newY += step;
+      console.error('No monitor found!');
     }
-
-    // 確保不超出螢幕範圍
-    newY = Math.max(0, Math.min(newY, logicalScreenHeight - WINDOW_HEIGHT));
-
-    await mainWindow.setPosition(new LogicalPosition(0, newY));
-    console.log(`Window moved ${direction} to y=${newY} (scaleFactor: ${scaleFactor})`);
-
-    // 儲存新位置
-    config.petWindowY = newY;
-    await savePetWindowY(newY);
-  } catch (error) {
-    console.error('Failed to move window:', error);
-  }
-}
-
-/**
- * 重置視窗位置到螢幕底部
- */
-async function resetWindowPosition(): Promise<void> {
-  try {
-    const mainWindow = getCurrentWebviewWindow();
-    const monitor = await currentMonitor();
-
-    if (!monitor) {
-      console.error('No monitor found');
-      return;
-    }
-
-    const screenHeight = monitor.size.height;
-    const scaleFactor = monitor.scaleFactor;
-    const logicalScreenHeight = screenHeight / scaleFactor;
-
-    // 重置到螢幕底部
-    const newY = Math.round(logicalScreenHeight - WINDOW_HEIGHT);
-
-    await mainWindow.setPosition(new LogicalPosition(0, newY));
-    console.log('Window position reset to bottom, y:', newY, '(scaleFactor:', scaleFactor, ')');
-
-    // 儲存位置
-    config.petWindowY = newY;
-    await savePetWindowY(newY);
-  } catch (error) {
-    console.error('Failed to reset window position:', error);
-  }
+  });
 }
 
 /**
@@ -394,16 +365,19 @@ async function pollPetState(): Promise<void> {
   console.log('Polling pet state...');
 
   try {
-    const petState = await apiClient.getPetState();
-    console.log('Poll successful, pet state:', petState);
+    const pets = await apiClient.getPets();
+    console.log('Poll successful, pet count:', pets.length);
 
     // 更新狀態
-    config.lastPetState = petState;
-    await savePetState(petState);
-    petController.updateState(petState);
+    config.allPets = pets;
+    await saveAllPets(pets);
+
+    // 更新顯示的寵物
+    const petsToShow = getSelectedPets();
+    petManager.updatePets(petsToShow);
 
     // 確保寵物顯示（如果設定為顯示）
-    if (config.petVisible !== false) {
+    if (config.petVisible !== false && petsToShow.length > 0) {
       const petContainer = document.getElementById('pet-container');
       petContainer?.classList.remove('hidden');
     }

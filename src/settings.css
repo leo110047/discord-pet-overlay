@@ -396,6 +396,113 @@ input:checked + .toggle-slider:before {
   font-weight: 500;
 }
 
+/* 寵物選擇器 */
+.pet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pet-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pet-item:hover {
+  background: rgba(88, 101, 242, 0.1);
+  border-color: rgba(88, 101, 242, 0.3);
+}
+
+.pet-item.selected {
+  background: rgba(88, 101, 242, 0.15);
+  border-color: #5865f2;
+}
+
+.pet-item-checkbox {
+  width: 20px;
+  height: 20px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid #4f545c;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.pet-item-checkbox:checked {
+  background: #5865f2;
+  border-color: #5865f2;
+}
+
+.pet-item-checkbox:checked::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin: 2px auto;
+}
+
+.pet-item-sprite {
+  width: 48px;
+  height: 48px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.pet-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pet-item-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: capitalize;
+}
+
+.pet-item-details {
+  color: #72767d;
+  font-size: 12px;
+}
+
+.pet-item-badge {
+  padding: 2px 8px;
+  background: rgba(88, 101, 242, 0.3);
+  border-radius: 10px;
+  color: #5865f2;
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pet-item-badge.active {
+  background: rgba(35, 134, 54, 0.3);
+  color: #3ba55d;
+}
+
+.pet-list-empty {
+  text-align: center;
+  padding: 20px;
+  color: #72767d;
+  font-size: 14px;
+}
+
 /* 隱藏元素 */
 .hidden {
   display: none !important;

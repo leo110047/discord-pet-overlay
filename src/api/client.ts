@@ -91,20 +91,34 @@ export class ApiClient {
   }
 
   /**
-   * 取得寵物狀態
+   * 取得所有寵物狀態
    */
-  async getPetState(): Promise<PetState> {
+  async getPets(): Promise<PetState[]> {
     if (!this.token) {
       throw new ApiError(401, 'NO_TOKEN', 'No token set');
     }
 
-    const response = await this.request<PetState>(
+    const response = await this.request<PetState[]>(
       'GET',
-      '/api/me/pet-state',
+      '/api/me/pets',
       undefined,
       true
     );
     return response;
+  }
+
+  /**
+   * 取得寵物狀態（舊 API，保留向後相容）
+   * @deprecated 請使用 getPets() 取得所有寵物
+   */
+  async getPetState(): Promise<PetState> {
+    const pets = await this.getPets();
+    // 返回第一隻活躍的寵物，或第一隻寵物
+    const activePet = pets.find(p => p.isActive) || pets[0];
+    if (!activePet) {
+      throw new ApiError(404, 'NO_PET', 'No pets found');
+    }
+    return activePet;
   }
 
   /**

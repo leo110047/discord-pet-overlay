@@ -2,4 +2,10 @@
  * 動畫模組匯出
  */
 
-export { PetController, createPetController } from './pet';
+export {
+  PetController,
+  createPetController,
+  MultiPetManager,
+  createMultiPetManager,
+  setApiBaseUrl,
+} from './pet';

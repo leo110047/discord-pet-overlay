@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>設定 - Discord Pet Overlay</title>
+    <title>設定 - ODANGO</title>
     <link rel="stylesheet" href="/src/settings.css" />
   </head>
   <body>
@@ -54,13 +54,9 @@
         <div class="section-title">外觀設定</div>
 
         <div class="form-group">
-          <label>寵物垂直位置</label>
-          <p class="section-desc">點擊箭頭調整寵物在螢幕上的位置</p>
-          <div class="position-controls">
-            <button id="move-up-btn" class="arrow-btn" type="button" title="往上移動">▲</button>
-            <button id="move-down-btn" class="arrow-btn" type="button" title="往下移動">▼</button>
-            <button id="reset-position-btn" class="reset-btn" type="button">重置</button>
-          </div>
+          <label>視窗位置調整</label>
+          <p class="section-desc">按住 <kbd>Ctrl+O</kbd> 0.5 秒進入互動模式，可拖曳視窗位置和調整寬度</p>
+          <button id="reset-position-btn" class="secondary-btn" type="button">重置視窗位置</button>
         </div>
 
         <div class="form-group">
@@ -82,20 +78,12 @@
         </div>
       </div>
 
-      <!-- 寵物狀態區塊 -->
-      <div id="pet-stats" class="settings-section hidden">
-        <div class="section-title">寵物狀態</div>
-        <div class="stat-row">
-          <span>經驗值</span>
-          <span id="stat-xp">-</span>
-        </div>
-        <div class="stat-row">
-          <span>階段</span>
-          <span id="stat-stage">-</span>
-        </div>
-        <div class="stat-row">
-          <span>大小</span>
-          <span id="stat-scale">-</span>
+      <!-- 寵物選擇器區塊 -->
+      <div id="pet-selector" class="settings-section hidden">
+        <div class="section-title">選擇要顯示的寵物</div>
+        <p class="section-desc">勾選要在桌面上顯示的寵物（可多選）</p>
+        <div id="pet-list" class="pet-list">
+          <!-- 寵物列表會由 JavaScript 動態生成 -->
         </div>
       </div>
 
@@ -105,7 +93,7 @@
         <div class="form-group">
           <div class="about-row">
             <span>版本</span>
-            <span id="app-version">v1.0.3</span>
+            <span id="app-version">v1.0.4</span>
           </div>
           <button id="check-update-btn" class="secondary-btn" type="button">檢查更新</button>
         </div>

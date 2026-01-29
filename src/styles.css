@@ -97,3 +97,97 @@ html, body {
 .hidden {
   display: none !important;
 }
+
+/* ===== 互動模式樣式 ===== */
+
+/* 互動模式邊框 */
+.interaction-border {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid #4CAF50;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+  box-shadow: inset 0 0 20px rgba(76, 175, 80, 0.2);
+}
+
+.interaction-border.visible {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: move;
+}
+
+/* 互動模式提示文字 */
+.interaction-border::after {
+  content: '互動模式：拖曳移動視窗，左右邊緣調整寬度，Ctrl+O 長按退出';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(76, 175, 80, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Resize handles */
+.resize-handle {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 1001;
+}
+
+.resize-handle.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.resize-handle-left {
+  left: 0;
+  cursor: ew-resize;
+  border-left: 4px solid #4CAF50;
+}
+
+.resize-handle-right {
+  right: 0;
+  cursor: ew-resize;
+  border-right: 4px solid #4CAF50;
+}
+
+.resize-handle:hover {
+  background: rgba(76, 175, 80, 0.3);
+}
+
+/* Resize handle 圓點指示器 */
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 40px;
+  background: #4CAF50;
+  border-radius: 4px;
+}
+
+.resize-handle-left::before {
+  left: 2px;
+}
+
+.resize-handle-right::before {
+  right: 2px;
+}

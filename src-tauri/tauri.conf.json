@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Discord Pet Overlay",
+  "productName": "ODANGO",
   "version": "1.0.4",
-  "identifier": "com.discord-pet-overlay.app",
+  "identifier": "com.odango.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Discord Pet Overlay",
+        "title": "ODANGO",
         "url": "/",
         "width": 1920,
         "height": 200,
@@ -30,7 +30,7 @@
       },
       {
         "label": "settings",
-        "title": "設定 - Discord Pet Overlay",
+        "title": "設定 - ODANGO",
         "url": "/settings.html",
         "width": 400,
         "height": 600,

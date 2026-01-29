@@ -1,4 +1,4 @@
-// Discord Pet Overlay - Tauri 後端
+// ODANGO - Tauri 後端
 
 use sysinfo::System;
 use tauri::{
@@ -36,7 +36,7 @@ fn open_settings_window(app: &tauri::AppHandle) {
     } else {
         // 如果不存在，建立新視窗
         let _ = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("/settings.html".into()))
-            .title("設定 - Discord Pet Overlay")
+            .title("設定 - ODANGO")
             .inner_size(400.0, 600.0)
             .min_inner_size(360.0, 400.0)
             .resizable(true)
@@ -49,6 +49,7 @@ fn open_settings_window(app: &tauri::AppHandle) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -56,6 +57,7 @@ pub fn run() {
             // 當嘗試開啟第二個實例時，顯示設定視窗
             open_settings_window(app);
         }))
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![is_discord_running])
         .setup(|app| {
             // 建立托盤選單（只保留設定和結束）

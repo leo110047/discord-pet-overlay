@@ -9,10 +9,19 @@ export {
   saveToken,
   clearToken,
   savePollInterval,
-  savePetState,
+  saveAllPets,
+  saveSelectedPetIds,
   saveWindowPosition,
   savePetWindowY,
+  saveWindowConfig,
   savePetMovementEnabled,
   savePetVisible,
   isTokenValid,
 } from './config';
+
+export {
+  getSpriteUrl,
+  preloadSprites,
+  clearBlobUrlCache,
+  getSpriteCachePath,
+} from './spriteCache';
