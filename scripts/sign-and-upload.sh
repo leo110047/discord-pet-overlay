@@ -1,5 +1,5 @@
 #!/bin/bash
-# Discord Pet Overlay - 簽名並上傳更新包腳本
+# ODANGO - 簽名並上傳更新包腳本
 # 用法: ./scripts/sign-and-upload.sh <version>
 # 範例: ./scripts/sign-and-upload.sh v1.0.4
 
@@ -13,14 +13,14 @@ if [ -z "$VERSION" ]; then
 fi
 
 # 配置
-PRIVATE_KEY_PATH="$HOME/.tauri/discord-pet-overlay.key"
+PRIVATE_KEY_PATH="$HOME/.tauri/odango.key"
 PRIVATE_KEY_PASSWORD="tauri2025"
 REPO="leo110047/discord-pet-overlay"
 TEMP_DIR="/tmp/tauri-signing-$VERSION"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-echo "=== Discord Pet Overlay 簽名上傳腳本 ==="
+echo "=== ODANGO 簽名上傳腳本 ==="
 echo "版本: $VERSION"
 echo ""
 

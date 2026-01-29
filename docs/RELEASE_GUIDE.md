@@ -1,4 +1,4 @@
-# Discord Pet Overlay 發布指南
+# ODANGO 發布指南
 
 ## 發布流程概述
 
@@ -11,18 +11,22 @@
 
 ### 1. 更新版本號
 
-在以下檔案中更新版本號：
+使用版本同步腳本自動更新所有檔案的版本號：
 
 ```bash
-# package.json
-"version": "x.x.x"
+# 檢查當前版本
+node scripts/sync-version.mjs
 
-# src-tauri/tauri.conf.json
-"version": "x.x.x"
-
-# src-tauri/Cargo.toml
-version = "x.x.x"
+# 更新到新版本
+node scripts/sync-version.mjs x.x.x
 ```
+
+這個腳本會自動更新：
+- `package.json`
+- `src-tauri/tauri.conf.json`
+- `src-tauri/Cargo.toml`
+
+> ⚠️ **注意**：更新版本後需要執行 `cargo generate-lockfile` 來更新 Cargo.lock
 
 ### 2. 提交並推送
 
@@ -76,7 +80,7 @@ gh release edit vx.x.x --draft=false
 
 ### 簽名金鑰
 
-- **私鑰位置**：`~/.tauri/discord-pet-overlay.key`
+- **私鑰位置**：`~/.tauri/odango.key`
 - **密碼**：`tauri2025`
 - **公鑰**：已內嵌於 `src-tauri/tauri.conf.json`
 
