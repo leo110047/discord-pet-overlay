@@ -3,9 +3,9 @@
  */
 
 /**
- * 寵物種類
+ * 寵物種類（由後端動態定義）
  */
-export type PetSpecies = 'egg' | 'slime' | 'fox' | 'dragon' | 'charmander' | 'agumon' | 'wooper' | 'diglett' | 'ditto';
+export type PetSpecies = string;
 
 /**
  * 寵物成長階段
