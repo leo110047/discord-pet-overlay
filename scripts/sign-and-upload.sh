@@ -17,6 +17,8 @@ PRIVATE_KEY_PATH="$HOME/.tauri/discord-pet-overlay.key"
 PRIVATE_KEY_PASSWORD="tauri2025"
 REPO="leo110047/discord-pet-overlay"
 TEMP_DIR="/tmp/tauri-signing-$VERSION"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "=== Discord Pet Overlay 簽名上傳腳本 ==="
 echo "版本: $VERSION"
@@ -56,7 +58,7 @@ echo ""
 echo "=== 步驟 2: 簽名更新包 ==="
 for ASSET in $ASSETS; do
     echo "簽名: $ASSET"
-    npx tauri signer sign --private-key-path "$PRIVATE_KEY_PATH" --password "$PRIVATE_KEY_PASSWORD" "$TEMP_DIR/$ASSET"
+    (cd "$PROJECT_DIR" && npx tauri signer sign --private-key-path "$PRIVATE_KEY_PATH" --password "$PRIVATE_KEY_PASSWORD" "$TEMP_DIR/$ASSET")
     echo "  -> 產生 $ASSET.sig"
 done
 
