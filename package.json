@@ -1,6 +1,6 @@
 {
   "name": "odango",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "ODANGO - 桌面寵物應用程式",
   "type": "module",
   "scripts": {
